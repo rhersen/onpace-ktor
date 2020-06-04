@@ -41,7 +41,7 @@ fun Application.module(testing: Boolean = false) {
     }
 
     val redirectUri = URLEncoder.encode(
-        "http://localhost:8080/logged-in", "UTF-8"
+        "https://onpace-ktor.herokuapp.com/logged-in", "UTF-8"
     )
 
     routing {
