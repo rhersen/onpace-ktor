@@ -24,6 +24,7 @@ import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import java.net.URLEncoder
+import java.time.LocalDate
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -89,8 +90,17 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                             }
 
                         val distance: Double = activityStats.ytd_run_totals.distance
+                        val target: Double = 15e5 * LocalDate.now().dayOfYear / 366.0
 
-                        call.respondText("Hej ${authentication.athlete.firstname}, ditt id är ${authentication.athlete.id} och du har sprungit $distance")
+                        call.respondText(
+                            """<html>
+    <meta charset='UTF-8'>
+    <div>Du har sprungit ${String.format("%.1f", distance * 1e-3)} km i år.</div>
+    <div>Målet är ${String.format("%.1f", target * 1e-3)} km.</div>
+    <div>Du ligger ${String.format("%.1f", target - distance)} meter efter.</div>"""
+                            ,
+                            ContentType.Text.Html
+                        )
                     }
                 }
             } catch (e: ClientRequestException) {
