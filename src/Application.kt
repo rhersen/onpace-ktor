@@ -14,6 +14,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.readText
 import io.ktor.features.ContentNegotiation
+import io.ktor.html.respondHtml
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
@@ -23,6 +24,9 @@ import io.ktor.response.respondRedirect
 import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.routing
+import kotlinx.html.a
+import kotlinx.html.body
+import kotlinx.html.div
 import java.net.URLEncoder
 import java.time.LocalDate
 
@@ -49,7 +53,11 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
     routing {
         get("/") {
-            call.respondText("<a href='login'>login</a>", contentType = ContentType.Text.Html)
+            call.respondHtml {
+                body {
+                    a(href = "login") { +"login" }
+                }
+            }
         }
 
         get("/login") {
@@ -92,15 +100,13 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                         val distance: Double = activityStats.ytd_run_totals.distance
                         val target: Double = 15e5 * LocalDate.now().dayOfYear / 366.0
 
-                        call.respondText(
-                            """<html>
-    <meta charset='UTF-8'>
-    <div>Du har sprungit ${String.format("%.1f", distance * 1e-3)} km i år.</div>
-    <div>Målet är ${String.format("%.1f", target * 1e-3)} km.</div>
-    <div>Du ligger ${String.format("%.1f", target - distance)} meter efter.</div>"""
-                            ,
-                            ContentType.Text.Html
-                        )
+                        call.respondHtml {
+                            body {
+                                div { +"Du har sprungit ${String.format("%.1f", distance * 1e-3)} km i år." }
+                                div { +"Målet är ${String.format("%.1f", target * 1e-3)} km." }
+                                div { +"Du ligger ${String.format("%.0f", target - distance)} meter efter." }
+                            }
+                        }
                     }
                 }
             } catch (e: ClientRequestException) {
@@ -114,4 +120,3 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
         }
     }
 }
-
