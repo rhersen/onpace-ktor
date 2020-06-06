@@ -10,6 +10,8 @@ import io.ktor.client.features.ClientRequestException
 import io.ktor.client.features.json.JacksonSerializer
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.request.forms.submitForm
+import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.readText
 import io.ktor.features.ContentNegotiation
 import io.ktor.http.ContentType
@@ -80,7 +82,15 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                                 append("grant_type", "authorization_code")
                             }
                         )
-                        call.respondText("Hej ${authentication.athlete.firstname}, ditt id är ${authentication.athlete.id}")
+
+                        val activityStats =
+                            client.get<ActivityStats>("https://www.strava.com/api/v3/athletes/${authentication.athlete.id}/stats") {
+                                header("Authorization", "Bearer ${authentication.access_token}")
+                            }
+
+                        val distance: Double = activityStats.ytd_run_totals.distance
+
+                        call.respondText("Hej ${authentication.athlete.firstname}, ditt id är ${authentication.athlete.id} och du har sprungit $distance")
                     }
                 }
             } catch (e: ClientRequestException) {
