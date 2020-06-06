@@ -19,7 +19,6 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.jackson.jackson
-import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.response.respondText
 import io.ktor.routing.get
@@ -62,7 +61,12 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
         get("/login") {
             call.respondRedirect(
-                "https://www.strava.com/oauth/authorize?client_id=45920&response_type=code&scope=read&redirect_uri=$redirectUri"
+                "https://www.strava.com/oauth/authorize?${arrayOf(
+                    "client_id=45920",
+                    "response_type=code",
+                    "scope=read",
+                    "redirect_uri=$redirectUri"
+                ).joinToString("&")}"
             )
         }
 
@@ -75,14 +79,14 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                 when {
                     clientId == null -> {
                         call.response.status(HttpStatusCode.InternalServerError)
-                        call.respondText("CLIENT_ID missing")
+                        call.respondHtml(HttpStatusCode.BadRequest) { body { div { +"CLIENT_ID missing" } } }
                     }
                     clientSecret == null -> {
                         call.response.status(HttpStatusCode.InternalServerError)
-                        call.respondText("CLIENT_SECRET missing")
+                        call.respondHtml(HttpStatusCode.BadRequest) { body { div { +"CLIENT_SECRET missing" } } }
                     }
                     else -> {
-                        val authentication = client.submitForm<Authentication>(
+                        val authentication: Authentication = client.submitForm(
                             "https://www.strava.com/api/v3/oauth/token",
                             Parameters.build {
                                 append("code", code)
@@ -92,8 +96,8 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                             }
                         )
 
-                        val activityStats =
-                            client.get<ActivityStats>("https://www.strava.com/api/v3/athletes/${authentication.athlete.id}/stats") {
+                        val activityStats: ActivityStats =
+                            client.get("https://www.strava.com/api/v3/athletes/${authentication.athlete.id}/stats") {
                                 header("Authorization", "Bearer ${authentication.access_token}")
                             }
 
@@ -113,10 +117,6 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                 val httpResponse = e.response
                 call.respondText(httpResponse.readText(), contentType = ContentType.Text.Plain)
             }
-        }
-
-        get("/json/jackson") {
-            call.respond(mapOf("hello" to "world"))
         }
     }
 }
