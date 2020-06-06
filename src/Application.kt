@@ -27,7 +27,7 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
-fun Application.module(testing: Boolean = false) {
+fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
     install(ContentNegotiation) {
         jackson {
             enable(SerializationFeature.INDENT_OUTPUT)
@@ -61,24 +61,27 @@ fun Application.module(testing: Boolean = false) {
                 val clientId = System.getenv("CLIENT_ID")
                 val clientSecret = System.getenv("CLIENT_SECRET")
 
-                if (clientId == null) {
-                    call.response.status(HttpStatusCode.InternalServerError)
-                    call.respondText("CLIENT_ID missing")
-                } else if (clientSecret == null) {
-                    call.response.status(HttpStatusCode.InternalServerError)
-                    call.respondText("CLIENT_SECRET missing")
-                } else {
-                    val authentication = client.submitForm<Authentication>(
-                        "https://www.strava.com/api/v3/oauth/token",
-                        Parameters.build {
-                            append("code", code)
-                            append("client_id", clientId)
-                            append("client_secret", clientSecret)
-                            append("grant_type", "authorization_code")
-                        }
-                    )
-                    println(authentication)
-                    call.respondText("Hej ${authentication.athlete.firstname}")
+                when {
+                    clientId == null -> {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respondText("CLIENT_ID missing")
+                    }
+                    clientSecret == null -> {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respondText("CLIENT_SECRET missing")
+                    }
+                    else -> {
+                        val authentication = client.submitForm<Authentication>(
+                            "https://www.strava.com/api/v3/oauth/token",
+                            Parameters.build {
+                                append("code", code)
+                                append("client_id", clientId)
+                                append("client_secret", clientSecret)
+                                append("grant_type", "authorization_code")
+                            }
+                        )
+                        call.respondText("Hej ${authentication.athlete.firstname}, ditt id är ${authentication.athlete.id}")
+                    }
                 }
             } catch (e: ClientRequestException) {
                 val httpResponse = e.response
