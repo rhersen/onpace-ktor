@@ -23,9 +23,7 @@ import io.ktor.response.respondRedirect
 import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.routing
-import kotlinx.html.a
-import kotlinx.html.body
-import kotlinx.html.div
+import kotlinx.html.*
 import java.net.URLEncoder
 import java.time.LocalDate
 
@@ -106,9 +104,22 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
                         call.respondHtml {
                             body {
-                                div { +"Du har sprungit ${String.format("%.1f", distance * 1e-3)} km i år." }
-                                div { +"Målet är ${String.format("%.1f", target * 1e-3)} km." }
-                                div { +"Du ligger ${String.format("%.0f", target - distance)} meter efter." }
+                                div {
+                                    h4 { +"löpning" }
+                                    div {
+                                        span { +String.format("%.1f", distance * 1e-3) }
+                                        +"/"
+                                        span { +"${String.format("%.1f", target * 1e-3)} km" }
+                                    }
+                                    div {
+                                        +(
+                                                if (target < distance)
+                                                    "${String.format("%.0f", distance - target)} meter före"
+                                                else
+                                                    "${String.format("%.0f", target - distance)} meter efter"
+                                                )
+                                    }
+                                }
                             }
                         }
                     }
