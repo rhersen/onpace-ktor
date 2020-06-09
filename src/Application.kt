@@ -27,7 +27,7 @@ import kotlinx.html.*
 import java.net.URLEncoder
 import java.time.LocalDate
 
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
 
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
@@ -51,6 +51,12 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
   routing {
     get("/") {
       call.respondHtml {
+        head {
+          meta(
+            name = "viewport",
+            content = "width=device-width,initial-scale=1"
+          )
+        }
         body {
           a(href = "login") { +"login" }
         }
@@ -70,7 +76,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
     get("/logged-in") {
       try {
-        val code: String = call.request.queryParameters["code"].toString()
+        val code = call.request.queryParameters["code"].toString()
         val clientId = System.getenv("CLIENT_ID")
         val clientSecret = System.getenv("CLIENT_SECRET")
 
@@ -110,10 +116,16 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                 header("Authorization", "Bearer ${authentication.access_token}")
               }
 
-            val distance: Double = activityStats.ytd_run_totals.distance
-            val target: Double = 15e5 * LocalDate.now().dayOfYear / 366.0
+            val distance = activityStats.ytd_run_totals.distance
+            val target = 15e5 * LocalDate.now().dayOfYear / 366.0
 
             call.respondHtml {
+              head {
+                meta(
+                  name = "viewport",
+                  content = "width=device-width,initial-scale=1"
+                )
+              }
               body {
                 div {
                   h4 { +"löpning" }
@@ -122,14 +134,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                     +"/"
                     span { +"${String.format("%.1f", target * 1e-3)} km" }
                   }
-                  div {
-                    +(if (target < distance) "${String.format(
-                      "%.0f", distance - target
-                    )} meter före"
-                    else "${String.format(
-                      "%.0f", target - distance
-                    )} meter efter")
-                  }
+                  div { +(onpaceText(target, distance)) }
                 }
               }
             }
@@ -144,3 +149,9 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
     }
   }
 }
+
+private fun onpaceText(target: Double, distance: Double) =
+  if (target < distance) "${fmt(distance - target)} meter före"
+  else "${fmt(target - distance)} meter efter"
+
+private fun fmt(meters: Double) = String.format("%.0f", meters)
