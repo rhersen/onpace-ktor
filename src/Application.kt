@@ -1,6 +1,7 @@
 package name.hersen.onpace
 
 import com.fasterxml.jackson.databind.SerializationFeature
+import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
@@ -14,16 +15,15 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.readText
 import io.ktor.features.ContentNegotiation
-import io.ktor.html.respondHtml
+import io.ktor.freemarker.FreeMarker
+import io.ktor.freemarker.FreeMarkerContent
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.jackson.jackson
-import io.ktor.response.respondRedirect
-import io.ktor.response.respondText
+import io.ktor.response.*
 import io.ktor.routing.get
 import io.ktor.routing.routing
-import kotlinx.html.*
 import java.net.URLEncoder
 import java.time.LocalDate
 
@@ -38,6 +38,11 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
     }
   }
 
+  install(FreeMarker) {
+    templateLoader =
+      ClassTemplateLoader(this::class.java.classLoader, "templates")
+  }
+
   val client = HttpClient(Apache) {
     install(JsonFeature) {
       serializer = JacksonSerializer()
@@ -50,17 +55,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
   routing {
     get("/") {
-      call.respondHtml {
-        head {
-          meta(
-            name = "viewport",
-            content = "width=device-width,initial-scale=1"
-          )
-        }
-        body {
-          a(href = "login") { +"login" }
-        }
-      }
+      call.respond(FreeMarkerContent("index.ftl", mapOf<String, String>()))
     }
 
     get("/login") {
@@ -83,33 +78,29 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
         when {
           clientId == null -> {
             call.response.status(HttpStatusCode.InternalServerError)
-            call.respondHtml(HttpStatusCode.BadRequest) {
-              body {
-                div {
-                  +"CLIENT_ID missing"
-                }
-              }
-            }
+            call.respond(
+              FreeMarkerContent(
+                "missing.ftl", mapOf("field" to "CLIENT_ID")
+              )
+            )
           }
           clientSecret == null -> {
             call.response.status(HttpStatusCode.InternalServerError)
-            call.respondHtml(HttpStatusCode.BadRequest) {
-              body {
-                div {
-                  +"CLIENT_SECRET missing"
-                }
-              }
-            }
+            call.respond(
+              FreeMarkerContent(
+                "missing.ftl", mapOf("field" to "CLIENT_SECRET")
+              )
+            )
           }
           else -> {
-            val authentication: Authentication = client.submitForm(
-              "https://www.strava.com/api/v3/oauth/token",
-              Parameters.build {
-                append("code", code)
-                append("client_id", clientId)
-                append("client_secret", clientSecret)
-                append("grant_type", "authorization_code")
-              })
+            val authentication: Authentication =
+              client.submitForm("https://www.strava.com/api/v3/oauth/token",
+                Parameters.build {
+                  append("code", code)
+                  append("client_id", clientId)
+                  append("client_secret", clientSecret)
+                  append("grant_type", "authorization_code")
+                })
 
             val activityStats: ActivityStats =
               client.get("https://www.strava.com/api/v3/athletes/${authentication.athlete.id}/stats") {
@@ -119,25 +110,15 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             val distance = activityStats.ytd_run_totals.distance
             val target = 15e5 * LocalDate.now().dayOfYear / 366.0
 
-            call.respondHtml {
-              head {
-                meta(
-                  name = "viewport",
-                  content = "width=device-width,initial-scale=1"
+            call.respond(
+              FreeMarkerContent(
+                "onpace.ftl", mapOf(
+                  "distance" to String.format("%.1f", distance * 1e-3),
+                  "target" to String.format("%.1f", target * 1e-3),
+                  "onpaceText" to onpaceText(target, distance)
                 )
-              }
-              body {
-                div {
-                  h4 { +"löpning" }
-                  div {
-                    span { +String.format("%.1f", distance * 1e-3) }
-                    +"/"
-                    span { +"${String.format("%.1f", target * 1e-3)} km" }
-                  }
-                  div { +(onpaceText(target, distance)) }
-                }
-              }
-            }
+              )
+            )
           }
         }
       } catch (e: ClientRequestException) {
