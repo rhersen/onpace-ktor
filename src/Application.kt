@@ -53,6 +53,8 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
         "https://onpace-ktor.herokuapp.com/logged-in", "UTF-8"
     )
 
+  val tokens = HashMap<Number, String>()
+
   routing {
     get("/") {
       call.respond(FreeMarkerContent("index.ftl", mapOf<String, String>()))
