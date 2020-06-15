@@ -93,18 +93,22 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             )
           }
           else -> {
-            val authentication: Authentication =
-              client.submitForm("https://www.strava.com/api/v3/oauth/token",
-                Parameters.build {
-                  append("code", code)
-                  append("client_id", clientId)
-                  append("client_secret", clientSecret)
-                  append("grant_type", "authorization_code")
-                })
+            val authentication: Authentication = client.submitForm(
+              "https://www.strava.com/api/v3/oauth/token",
+              Parameters.build {
+                append("code", code)
+                append("client_id", clientId)
+                append("client_secret", clientSecret)
+                append("grant_type", "authorization_code")
+              })
+
+            tokens[authentication.athlete.id] = authentication.access_token
 
             val activityStats: ActivityStats =
               client.get("https://www.strava.com/api/v3/athletes/${authentication.athlete.id}/stats") {
-                header("Authorization", "Bearer ${authentication.access_token}")
+                header(
+                  "Authorization", "Bearer ${tokens[authentication.athlete.id]}"
+                )
               }
 
             val distance = activityStats.ytd_run_totals.distance
@@ -115,11 +119,52 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                 "onpace.ftl", mapOf(
                   "distance" to String.format("%.1f", distance * 1e-3),
                   "target" to String.format("%.1f", target * 1e-3),
-                  "onpaceText" to onpaceText(target, distance)
+                  "onpaceText" to onpaceText(target, distance),
+                  "athleteId" to authentication.athlete.id.toString()
                 )
               )
             )
           }
+        }
+      } catch (e: ClientRequestException) {
+        val httpResponse = e.response
+        call.respondText(
+          httpResponse.readText(), contentType = ContentType.Text.Plain
+        )
+      }
+    }
+
+    get("/reload") {
+      try {
+        val athleteId = call.request.queryParameters["athleteId"]?.toInt()
+
+        if (athleteId == null) {
+          call.respond(
+            FreeMarkerContent(
+              "missing.ftl", mapOf("field" to "athleteId")
+            )
+          )
+        } else {
+          val activityStats: ActivityStats =
+            client.get("https://www.strava.com/api/v3/athletes/${athleteId}/stats") {
+              header(
+                "Authorization", "Bearer ${tokens[athleteId]}"
+              )
+            }
+
+          val distance = activityStats.ytd_run_totals.distance
+          val target = 15e5 * LocalDate.now().dayOfYear / 366.0
+
+          call.respond(
+            FreeMarkerContent(
+              "onpace.ftl", mapOf(
+                "distance" to String.format("%.1f", distance * 1e-3),
+                "target" to String.format("%.1f", target * 1e-3),
+                "onpaceText" to onpaceText(target, distance),
+                "athleteId" to athleteId
+              )
+            )
+          )
         }
       } catch (e: ClientRequestException) {
         val httpResponse = e.response
