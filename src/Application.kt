@@ -138,7 +138,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
     get("/reload") {
       try {
-        val athleteId = call.request.queryParameters["athleteId"]?.toInt()
+        val athleteId = call.request.queryParameters["athleteId"]
 
         if (athleteId == null) {
           call.respond(
@@ -150,7 +150,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
           val activityStats: ActivityStats =
             client.get("https://www.strava.com/api/v3/athletes/${athleteId}/stats") {
               header(
-                "Authorization", "Bearer ${tokens[athleteId]}"
+                "Authorization", "Bearer ${tokens[athleteId.toInt()]}"
               )
             }
 
