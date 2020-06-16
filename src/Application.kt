@@ -53,7 +53,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
         "https://onpace-ktor.herokuapp.com/logged-in", "UTF-8"
     )
 
-  val tokens = HashMap<Number, String>()
+  val tokens = HashMap<String, String>()
 
   routing {
     get("/") {
@@ -104,12 +104,13 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                 append("grant_type", "authorization_code")
               })
 
-            tokens[authentication.athlete.id] = authentication.access_token
+            val athleteId = authentication.athlete.id.toString()
+            tokens[athleteId] = authentication.access_token
 
             val activityStats: ActivityStats =
-              client.get("https://www.strava.com/api/v3/athletes/${authentication.athlete.id}/stats") {
+              client.get("https://www.strava.com/api/v3/athletes/$athleteId/stats") {
                 header(
-                  "Authorization", "Bearer ${tokens[authentication.athlete.id]}"
+                  "Authorization", "Bearer ${tokens[athleteId]}"
                 )
               }
 
@@ -122,7 +123,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                   "distance" to String.format("%.1f", distance * 1e-3),
                   "target" to String.format("%.1f", target * 1e-3),
                   "onpaceText" to onpaceText(target, distance),
-                  "athleteId" to authentication.athlete.id.toString()
+                  "athleteId" to athleteId
                 )
               )
             )
@@ -150,7 +151,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
           val activityStats: ActivityStats =
             client.get("https://www.strava.com/api/v3/athletes/${athleteId}/stats") {
               header(
-                "Authorization", "Bearer ${tokens[athleteId.toInt()]}"
+                "Authorization", "Bearer ${tokens[athleteId]}"
               )
             }
 
