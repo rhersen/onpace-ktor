@@ -25,6 +25,7 @@ import io.ktor.response.*
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import java.net.URLEncoder
+import java.time.Instant
 import java.time.LocalDate
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
@@ -53,7 +54,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
         "https://onpace-ktor.herokuapp.com/logged-in", "UTF-8"
     )
 
-  val tokens = HashMap<String, String>()
+  val authentications = HashMap<String, Authentication>()
 
   routing {
     get("/") {
@@ -95,22 +96,23 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             )
           }
           else -> {
-            val authentication: Authentication = client.submitForm(
-              "https://www.strava.com/api/v3/oauth/token",
-              Parameters.build {
-                append("code", code)
-                append("client_id", clientId)
-                append("client_secret", clientSecret)
-                append("grant_type", "authorization_code")
-              })
+            val authentication: Authentication =
+              client.submitForm("https://www.strava.com/api/v3/oauth/token",
+                Parameters.build {
+                  append("code", code)
+                  append("client_id", clientId)
+                  append("client_secret", clientSecret)
+                  append("grant_type", "authorization_code")
+                })
 
             val athleteId = authentication.athlete.id.toString()
-            tokens[athleteId] = authentication.access_token
+            authentications[athleteId] = authentication
 
             val activityStats: ActivityStats =
               client.get("https://www.strava.com/api/v3/athletes/$athleteId/stats") {
                 header(
-                  "Authorization", "Bearer ${tokens[athleteId]}"
+                  "Authorization",
+                  "${authentication.token_type} ${authentication.access_token}"
                 )
               }
 
@@ -123,7 +125,8 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
                   "distance" to String.format("%.1f", distance * 1e-3),
                   "target" to String.format("%.1f", target * 1e-3),
                   "onpaceText" to onpaceText(target, distance),
-                  "athleteId" to athleteId
+                  "athleteId" to athleteId,
+                  "expiresAt" to Instant.ofEpochSecond(authentication.expires_at.toLong())
                 )
               )
             )
@@ -148,26 +151,38 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             )
           )
         } else {
-          val activityStats: ActivityStats =
-            client.get("https://www.strava.com/api/v3/athletes/${athleteId}/stats") {
-              header(
-                "Authorization", "Bearer ${tokens[athleteId]}"
-              )
-            }
+          val authentication = authentications[athleteId]
 
-          val distance = activityStats.ytd_run_totals.distance
-          val target = 15e5 * LocalDate.now().dayOfYear / 366.0
-
-          call.respond(
-            FreeMarkerContent(
-              "onpace.ftl", mapOf(
-                "distance" to String.format("%.1f", distance * 1e-3),
-                "target" to String.format("%.1f", target * 1e-3),
-                "onpaceText" to onpaceText(target, distance),
-                "athleteId" to athleteId
+          if (authentication == null) {
+            call.respond(
+              FreeMarkerContent(
+                "missing.ftl", mapOf("field" to "authentication")
               )
             )
-          )
+          } else {
+            val activityStats: ActivityStats =
+              client.get("https://www.strava.com/api/v3/athletes/$athleteId/stats") {
+                header(
+                  "Authorization",
+                  "${authentication.token_type} ${authentication.access_token}"
+                )
+              }
+
+            val distance = activityStats.ytd_run_totals.distance
+            val target = 15e5 * LocalDate.now().dayOfYear / 366.0
+
+            call.respond(
+              FreeMarkerContent(
+                "onpace.ftl", mapOf(
+                  "distance" to String.format("%.1f", distance * 1e-3),
+                  "target" to String.format("%.1f", target * 1e-3),
+                  "onpaceText" to onpaceText(target, distance),
+                  "athleteId" to athleteId,
+                  "expiresAt" to Instant.ofEpochSecond(authentication.expires_at.toLong())
+                )
+              )
+            )
+          }
         }
       } catch (e: ClientRequestException) {
         val httpResponse = e.response
