@@ -17,13 +17,12 @@ import io.ktor.client.statement.readText
 import io.ktor.features.ContentNegotiation
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.Parameters
+import io.ktor.http.*
 import io.ktor.jackson.jackson
 import io.ktor.response.*
 import io.ktor.routing.get
 import io.ktor.routing.routing
+import io.ktor.util.createFromCall
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.LocalDate
@@ -50,10 +49,6 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
     }
   }
 
-    val redirectUri = URLEncoder.encode(
-        "https://onpace-ktor.herokuapp.com/logged-in", "UTF-8"
-    )
-
   val authentications = HashMap<String, Authentication>()
 
   routing {
@@ -62,6 +57,10 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
     }
 
     get("/login") {
+      val redirectUri = URLEncoder.encode(
+        URLBuilder.createFromCall(call).path("logged-in").buildString(), "UTF-8"
+      )
+
       call.respondRedirect(
         "https://www.strava.com/oauth/authorize?${arrayOf(
           "client_id=45920",
@@ -96,14 +95,14 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             )
           }
           else -> {
-            val authentication: Authentication =
-              client.submitForm("https://www.strava.com/api/v3/oauth/token",
-                Parameters.build {
-                  append("code", code)
-                  append("client_id", clientId)
-                  append("client_secret", clientSecret)
-                  append("grant_type", "authorization_code")
-                })
+            val authentication: Authentication = client.submitForm(
+              "https://www.strava.com/api/v3/oauth/token",
+              Parameters.build {
+                append("code", code)
+                append("client_id", clientId)
+                append("client_secret", clientSecret)
+                append("grant_type", "authorization_code")
+              })
 
             val athleteId = authentication.athlete.id.toString()
             authentications[athleteId] = authentication
