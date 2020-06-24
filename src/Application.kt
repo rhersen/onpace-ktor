@@ -17,12 +17,14 @@ import io.ktor.client.statement.readText
 import io.ktor.features.ContentNegotiation
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
-import io.ktor.http.*
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
 import io.ktor.jackson.jackson
+import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.get
 import io.ktor.routing.routing
-import io.ktor.util.createFromCall
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.LocalDate
@@ -51,22 +53,23 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
   val authentications = HashMap<String, Authentication>()
 
+  val redirectUri =
+    URLEncoder.encode("https://onpace-ktor.herokuapp.com/logged-in", "UTF-8")
+  val localhostUri =
+    URLEncoder.encode("http://localhost:8080/logged-in", "UTF-8")
+
   routing {
     get("/") {
       call.respond(FreeMarkerContent("index.ftl", mapOf<String, String>()))
     }
 
     get("/login") {
-      val redirectUri = URLEncoder.encode(
-        URLBuilder.createFromCall(call).path("logged-in").buildString(), "UTF-8"
-      )
-
       call.respondRedirect(
         "https://www.strava.com/oauth/authorize?${arrayOf(
           "client_id=45920",
           "response_type=code",
           "scope=read",
-          "redirect_uri=$redirectUri"
+          "redirect_uri=${if (call.request.host() == "localhost") localhostUri else redirectUri}"
         ).joinToString("&")}"
       )
     }
