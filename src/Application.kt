@@ -54,16 +54,16 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
   val authentications = HashMap<String, Authentication>()
 
   val redirectUri =
-    URLEncoder.encode("https://onpace-ktor.herokuapp.com/logged-in", "UTF-8")
+    URLEncoder.encode("https://secure.hersen.name/onpace/logged-in", "UTF-8")
   val localhostUri =
-    URLEncoder.encode("http://localhost:8080/logged-in", "UTF-8")
+    URLEncoder.encode("http://localhost:1338/onpace/logged-in", "UTF-8")
 
   routing {
-    get("/") {
+    get("/onpace/") {
       call.respond(FreeMarkerContent("index.ftl", mapOf<String, String>()))
     }
 
-    get("/login") {
+    get("/onpace/login") {
       call.respondRedirect(
         "https://www.strava.com/oauth/authorize?${arrayOf(
           "client_id=45920",
@@ -74,7 +74,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
       )
     }
 
-    get("/logged-in") {
+    get("/onpace/logged-in") {
       try {
         val code = call.request.queryParameters["code"].toString()
         val clientId = System.getenv("CLIENT_ID")
@@ -142,7 +142,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
       }
     }
 
-    get("/reload") {
+    get("/onpace/reload") {
       try {
         val athleteId = call.request.queryParameters["athleteId"]
 

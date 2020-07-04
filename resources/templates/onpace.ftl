@@ -4,8 +4,8 @@
 </head>
 <body>
 <div>
-    <a href="login">login</a>
-    <a href="reload?athleteId=${athleteId}">reload</a>
+    <a href="/onpace/login">login</a>
+    <a href="/onpace/reload?athleteId=${athleteId}">reload</a>
     <div>token expires at ${expiresAt}</div>
     <h4>löpning</h4>
     <div><span>${distance}</span>/<span>${target} km</span></div>
