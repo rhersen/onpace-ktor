@@ -110,23 +110,9 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
             val athleteId = authentication.athlete.id.toString()
             authentications[athleteId] = authentication
 
-            val activityStats: ActivityStats =
-              client.get("https://www.strava.com/api/v3/athletes/$athleteId/stats") {
-                header(
-                  "Authorization",
-                  "${authentication.token_type} ${authentication.access_token}"
-                )
-              }
-
-            val distance = activityStats.ytd_run_totals.distance
-            val target = 15e5 * LocalDate.now().dayOfYear / 366.0
-
             call.respond(
               FreeMarkerContent(
-                "onpace.ftl", mapOf(
-                  "distance" to String.format("%.1f", distance * 1e-3),
-                  "target" to String.format("%.1f", target * 1e-3),
-                  "onpaceText" to onpaceText(target, distance),
+                "logged-in.ftl", mapOf(
                   "athleteId" to athleteId,
                   "expiresAt" to Instant.ofEpochSecond(authentication.expires_at.toLong())
                 )
