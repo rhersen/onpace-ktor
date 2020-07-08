@@ -54,9 +54,9 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
   val authentications = HashMap<String, Authentication>()
 
   val redirectUri =
-    URLEncoder.encode("https://secure.hersen.name/onpace/home", "UTF-8")
+    URLEncoder.encode("https://secure.hersen.name/onpace/authenticated", "UTF-8")
   val localhostUri =
-    URLEncoder.encode("http://localhost:1338/onpace/home", "UTF-8")
+    URLEncoder.encode("http://localhost:1338/onpace/authenticated", "UTF-8")
 
   routing {
     get("/onpace/") {
@@ -74,7 +74,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
       )
     }
 
-    get("/onpace/home") {
+    get("/onpace/authenticated") {
       try {
         val code = call.request.queryParameters["code"].toString()
         val clientId = System.getenv("CLIENT_ID")
@@ -112,7 +112,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
             call.respond(
               FreeMarkerContent(
-                "home.ftl", mapOf(
+                "authenticated.ftl", mapOf(
                   "athleteId" to athleteId,
                   "expiresAt" to Instant.ofEpochSecond(authentication.expires_at.toLong())
                 )
