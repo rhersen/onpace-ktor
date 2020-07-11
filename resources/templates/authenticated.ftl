@@ -5,9 +5,8 @@
 <body>
 <div>
     <a href="/onpace/login">login</a>
-    <a href="/onpace/reload?athleteId=${athleteId}">reload</a>
+    <a href="/onpace/athlete/${athleteId}">athlete ${athleteId}</a>
     <div>token expires at ${expiresAt}</div>
-    <div>Athlete ${athleteId}</div>
 </div>
 </body>
 </html>

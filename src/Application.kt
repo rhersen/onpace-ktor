@@ -128,9 +128,9 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
       }
     }
 
-    get("/onpace/reload") {
+    get("/onpace/athlete/{athleteId}") {
       try {
-        val athleteId = call.request.queryParameters["athleteId"]
+        val athleteId = call.parameters["athleteId"]
 
         if (athleteId == null) {
           call.respond(
@@ -161,7 +161,7 @@ fun Application.module(@Suppress("UNUSED_PARAMETER") testing: Boolean = false) {
 
             call.respond(
               FreeMarkerContent(
-                "onpace.ftl", mapOf(
+                "athlete.ftl", mapOf(
                   "distance" to String.format("%.1f", distance * 1e-3),
                   "target" to String.format("%.1f", target * 1e-3),
                   "onpaceText" to onpaceText(target, distance),
